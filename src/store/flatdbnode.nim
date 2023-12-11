@@ -734,17 +734,20 @@ proc upsert*[T](
 ): Future[EntryId] {.async, discardable.} =
   db.upsert(key, node.toJs(), doFlush)
 
+proc resolve[T](val:T) : Future[T] {.importjs: "Promise.resolve(#)".}
+
 proc upsert*(
     db: FlatDb,
     node: JsObject,
     matcher: Matcher,
-    doFlush = true
+    doFlush = true, 
 ): Future[EntryId] {.async, discardable.} =
   # TODO this implementation is really suspect with duplicate inserts etc...
   let entry = db.queryOne(matcher)
   if entry.isNil:
-    return await db.insert(node, doFlush = doFlush)
+    db.insert(node, doFlush = doFlush)
   else:
     var id = entry["_id"].getStr()
     db[id] = node
-    return id
+    resolve(id)
+  
